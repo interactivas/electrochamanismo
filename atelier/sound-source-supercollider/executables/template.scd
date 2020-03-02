@@ -58,7 +58,7 @@ s.options.memSize_(2.pow(20)); // Roughly 1GB, probably extremely generous!
 				arg val;
 				oscTag.post; " : ".post; val.postln;
 				// TODO: spread value if it is an array. Spread operator in SC?
-				p.sendMsg(oscTag, val);
+				p.sendMsg(oscTag, *val);
 			});
 			(1/fps).wait;
 		}
