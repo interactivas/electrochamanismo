@@ -10,83 +10,39 @@
 ( // Double-click on this opening parenthesis and hit shift-enter to run
 
 ////////////////////////////////////////////////////////////////////////////////
-// Global CONFIG - Change this if needed
+// DEFINITIONS - This should rarely be changed
 ////////////////////////////////////////////////////////////////////////////////
-// Remote OSC listener
-~osc_host = "127.0.0.1";
-~osc_port = 7777;
+d = (
+	out: 0,
+	pathSamples: PathName(thisProcess.nowExecutingPath).parentPath ++ "../samples/";
+);
 
 ////////////////////////////////////////////////////////////////////////////////
-// Global variables
+// IMPORTS - These objects/functions should better be imported!
 ////////////////////////////////////////////////////////////////////////////////
-~out = 0;
-~path_samples = PathName(thisProcess.nowExecutingPath).parentPath ++ "../samples/";
+i = ();
 
-~buffers = Dictionary.new();
-~busses = Dictionary.new();
-~synths = Dictionary.new();
+i.makeSynthDefVolume= {
+	|self, synthName = \volume|
+	"Making SynthDef for -> ".post; synthName.postln;
 
-~routines = Dictionary.new();
-~patterns = Dictionary.new();
-
-~oscTags = Dictionary.new();
-
-////////////////////////////////////////////////////////////////////////////////
-// Server config
-////////////////////////////////////////////////////////////////////////////////
-s = Server.local;
-s.options.numInputBusChannels_(2);
-s.options.sampleRate_(44100);
-// Memory allocation for buffers and dynamically alloc for delays, etc
-s.options.memSize_(2.pow(20)); // Roughly 1GB, probably extremely generous!
-
-////////////////////////////////////////////////////////////////////////////////
-//
-////////////////////////////////////////////////////////////////////////////////
-
-//
-// Generic poller routine
-//
-~makeRoutinePoller = {
-	arg bus, oscTag, fps=1;
-	"Making poller routine for bus :".post; bus.postln;
-	p = NetAddr.new(~osc_host, ~osc_port);
-	Task.new({
-		"Routine started for OSC tag ".post; oscTag.post; " with ".post; fps.post; " fps".postln;
-		inf.do {
-			bus.getn(bus.numChannels, {
-				arg val;
-				oscTag.post; " : ".post; val.postln;
-				// TODO: spread value if it is an array. Spread operator in SC?
-				p.sendMsg(oscTag, *val);
-			});
-			(1/fps).wait;
-		}
-	});
-};
-
-////////////////////////////////////////////////////////////////////////////////
-// SynthDefs
-// TODO: SynthDefs could be imported from common file
-////////////////////////////////////////////////////////////////////////////////
-~makeSynthDefMFCC = {
-	arg synthName = \mfcc;
 	SynthDef(synthName, {
-		arg outControlBus=0, outAudioBus = 0, inAudioBus = 0, fftSize = 1024;
-		var in, fft, array;
+		|self, outControlBus=0, outAudioBus = 0, inAudioBus = 0|
+
+		var in, amp, freq, hasFreq, sound;
 		in = SoundIn.ar(inAudioBus);
-		fft = FFT(LocalBuf(fftSize), in);
-		array = MFCC.kr(fft);
-		//array.size.postln;
-		Out.kr(outControlBus, array);
-		//Out.ar(outAudioBus,Pan2.ar(in));
+		amp = Amplitude.kr(in, 0.05, 0.05);
+		Out.kr(outControlBus, amp);
 	});
 };
 
-~makeSynthDefPitch = {
-	arg synthName = \pitch;
+i.makeSynthDefPitch = {
+	|self, synthName = \pitch|
+	"Making SynthDef for -> ".post; synthName.postln;
+
 	SynthDef(synthName, {
-		arg outControlBus=0, outAudioBus = 0, inAudioBus = 0;
+		|outControlBus=0, outAudioBus = 0, inAudioBus = 0|
+
 		var in, amp, freq, hasFreq, sound;
 		in = SoundIn.ar(inAudioBus);
 		amp = Amplitude.kr(in, 0.05, 0.05);
@@ -98,81 +54,204 @@ s.options.memSize_(2.pow(20)); // Roughly 1GB, probably extremely generous!
 	});
 };
 
-~makeSynthDefVolume= {
-	arg synthName = \volume;
+i.makeSynthDefMFCC = {
+	|self, synthName = \mfcc|
+	"Making SynthDef for -> ".post; synthName.postln;
+
 	SynthDef(synthName, {
-		arg outControlBus=0, outAudioBus = 0, inAudioBus = 0;
-		var in, amp, freq, hasFreq, sound;
+		|outControlBus=0, outAudioBus = 0, inAudioBus = 0, fftSize = 1024|
+
+		var in, fft, array;
 		in = SoundIn.ar(inAudioBus);
-		amp = Amplitude.kr(in, 0.05, 0.05);
-		Out.kr(outControlBus, amp);
+		fft = FFT(LocalBuf(fftSize), in);
+		array = MFCC.kr(fft);
+		//array.size.postln;
+		Out.kr(outControlBus, array);
+		//Out.ar(outAudioBus,Pan2.ar(in));
 	});
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// CONFIGURATION  - Change this to fit your needs
+////////////////////////////////////////////////////////////////////////////////
+c = ();
+c.osc = (
+	host: "127.0.0.1",
+	port: 7777
+);
+c.sources = (
+	volume_in: (
+		oscTag: "/volume-in",
+		synthDefFactory: i[\makeSynthDefVolume],
+		channels: 1,
+		fps: 1,
+		started: true,
+		verbose: true
+	),
+	pitch_in: (
+		oscTag: "/pitch-in",
+		synthDefFactory: i[\makeSynthDefPitch],
+		channels: 1,
+		fps: 1,
+		started: true,
+		verbose: true
+	),
+	mfcc_in: (
+		oscTag: "/mfcc-in",
+		synthDefFactory: i[\makeSynthDefMFCC],
+		channels: 13,
+		fps: 1,
+		started: true,
+		verbose: true
+	)
+);
+
+////////////////////////////////////////////////////////////////////////////////
+// STATE - You may tinker with this in real-time (see bottom of this file)
+////////////////////////////////////////////////////////////////////////////////
+t = ();
+t.sources = (
+	busses: (),
+	synths: (),
+	tasks: (),
+	fps: (),
+	verbose: ()
+);
+
+////////////////////////////////////////////////////////////////////////////////
+// FUNCTIONS
+////////////////////////////////////////////////////////////////////////////////
+f = ();
+
+f.makeRoutinePoller = {
+	|self, sourceName, bus, oscTag, fps=1, verbose=false|
+
+	"Making poller routine for bus :".post; bus.postln;
+	p = NetAddr.new(c.osc.host, c.osc.port);
+	Task.new({
+		"Task started for OSC tag ".post; oscTag.post; " with ".post; fps.post; " fps".postln;
+		t.sources.fps[sourceName] = fps;
+		t.sources.verbose[sourceName] = verbose;
+		loop {
+			bus.getn(bus.numChannels, {
+				|val|
+				if (t.sources.verbose[sourceName] == true) {
+					oscTag.post; " : ".post; val.postln;
+				};
+				p.sendMsg(oscTag, *val);
+			});
+			(1/t.sources.fps[sourceName]).wait;
+		}
+	});
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// SERVER Setup functions
+////////////////////////////////////////////////////////////////////////////////
+f.makeBusses = {
+	"--- makeBusses".postln;
+	c.sources.keysValuesDo {
+		|sourceName, sourceConfig|
+		t.sources.busses[sourceName] = Bus.control(
+			s, numChannels: sourceConfig.channels
+		);
+	};
+	t.sources.busses.postln;
+};
+
+f.clearBusses = {
+	"--- clearBusses".postln;
+	t.sources.busses = ();
+	t.sources.busses.postln;
+};
+
+f.makeSynthDefs = {
+	"--- makeSynthDefs".postln;
+	c.sources.keysValuesDo {
+		|sourceName, sourceConfig|
+		sourceConfig.synthDefFactory(
+			sourceName
+		).add;
+	};
+};
+
+f.makeSynths = {
+	"--- makeSynhts".postln;
+	c.sources.keysValuesDo {
+		|sourceName, sourceConfig|
+		t.sources.synths[sourceName] = Synth.new(
+			sourceName,
+			[outControlBus: t.sources.busses[sourceName]]
+		);
+	};
+	t.sources.synths.postln;
+};
+
+f.clearSynths = {
+	"--- clearSynhts".postln;
+	t.sources.synths = ();
+	t.sources.synths.postln;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 // INTERPRETER Setup functions
 ////////////////////////////////////////////////////////////////////////////////
 
-~clearRoutines = {
-	"--- clearRoutines".postln;
-	~routines.keysValuesDo { |k,v| v.stop; };
-	~routines.postln;
+f.stopTasks = {
+	"--- stopTasks".postln;
+	t.sources.tasks.keysValuesDo {
+		|taskName,task|
+		task.stop;
+	};
+	t.sources.tasks.postln;
 };
 
-~makeRoutines = {
-	"--- makeRoutines".postln;
-	~clearRoutines.value;
-	~routines.add(
-		\volume -> ~makeRoutinePoller.value(~busses[\volume], "/volume", fps: 1));
-	~routines.add(
-		\pitch -> ~makeRoutinePoller.value(~busses[\pitch], "/pitch", fps: 1));
-	~routines.add(
-		\mfcc -> ~makeRoutinePoller.value(~busses[\mfcc], "/mfcc", fps: 1));
+f.clearTasks = {
+	"--- clearTasks".postln;
+	f.stopTasks;
+	t.sources.tasks = ();
+	t.sources.tasks.postln;
 };
 
-~playEvents = {
-	"--- playEvents".postln;
-	~routines[\volume].play;
-	~routines[\pitch].play;
-	~routines[\mfcc].play;
+f.makeTasks = {
+	"--- makeTasks".postln;
+	f.clearTasks.value;
+	c.sources.keysValuesDo {
+		|sourceName, sourceConfig|
+		t.sources.tasks[sourceName] = f.makeRoutinePoller(
+			sourceName,
+			t.sources.busses[sourceName],
+			c.sources[sourceName].oscTag,
+			c.sources[sourceName].fps,
+			c.sources[sourceName].verbose
+		);
+	};
+	t.sources.tasks.postln;
 };
 
-////////////////////////////////////////////////////////////////////////////////
-// SERVER Setup functions
-////////////////////////////////////////////////////////////////////////////////
-~makeBuffers = {
-	"--- makeBuffers".postln;
-};
-
-~makeBusses = {
-	"--- makeBusses".postln;
-	~busses.add(\volume -> Bus.control(s, 1));
-	~busses.add(\pitch -> Bus.control(s, 1));
-	~busses.add(\mfcc -> Bus.control(s, 13));
-	~busses.postln;
-};
-
-~makeSynthDefs = {
-	"--- makeSynthDefs".postln;
-	~makeSynthDefVolume.value(\volume).add;
-	~makeSynthDefPitch.value(\pitch).add;
-	~makeSynthDefMFCC.value(\mfcc).add;
-};
-
-~makeNodes = {
-	"--- makeNodes".postln;
-	Synth.new(\volume, [outControlBus: ~busses[\volume] ]);
-	Synth.new(\pitch, [outControlBus: ~busses[\pitch] ]);
-	Synth.new(\mfcc, [outControlBus: ~busses[\mfcc] ]);
+f.playTasks = {
+	"--- playTasks".postln;
+	t.sources.tasks.keysValuesDo {
+		|taskName, task|
+		task.play;
+	};
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 // CLEANUP
 ////////////////////////////////////////////////////////////////////////////////
 
-~cleanup = {
+f.clearFps = {
+	"--- clearFps".postln;
+	t.sources.fps = ();
+};
+
+f.cleanup = {
 	"--- cleanup".postln;
-	~clearRoutines.value;
+	f.clearTasks;
+	f.clearSynths;
+	f.clearFps;
+	f.clearBusses;
 	s.newBusAllocators;
 	ServerBoot.removeAll;
 	ServerTree.removeAll;
@@ -180,13 +259,21 @@ s.options.memSize_(2.pow(20)); // Roughly 1GB, probably extremely generous!
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+// Server config
+////////////////////////////////////////////////////////////////////////////////
+s = Server.local;
+s.options.numInputBusChannels_(2);
+s.options.sampleRate_(44100);
+// Memory allocation for buffers and dynamically alloc for delays, etc
+s.options.memSize_(2.pow(20)); // Roughly 1GB, probably extremely generous!
+
+////////////////////////////////////////////////////////////////////////////////
 // Start-up hooks
 ////////////////////////////////////////////////////////////////////////////////
 // Cleanup first to be extra-safe.
-~cleanup.value;
-ServerBoot.add(~makeBuffers);
-ServerBoot.add(~makeBusses);
-ServerQuit.add(~cleanup);
+f.cleanup;
+ServerBoot.add(f[\makeBusses]);
+ServerQuit.add(f[\cleanup]);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Boot server
@@ -195,13 +282,13 @@ s.waitForBoot({
 
 	s.sync; // Forces wait for the server to be done (e.g., loading buffers...)
 
-	~makeSynthDefs.value;
+	f.makeSynthDefs;
 
 	s.sync;
 
-	ServerTree.add(~makeNodes);
-	ServerTree.add(~makeRoutines);
-	ServerTree.add(~playEvents);
+	ServerTree.add(f[\makeSynths]);
+	ServerTree.add(f[\makeTasks]);
+	ServerTree.add(f[\playTasks]);
 	// Forces server to re-evaluate the 2 previous functions
 	s.freeAll;
 
@@ -215,18 +302,34 @@ nil;
 )
 
 ////////////////////////////////////////////////////////////////////////////////
-// Checks
+// REAL-TIME INTERACTION
 ////////////////////////////////////////////////////////////////////////////////
 
+//
+// Stop/start tasks
+//
+t.sources.tasks.volume_in.stop;
+t.sources.tasks.pitch_in.stop;
+t.sources.tasks.mfcc_in.stop;
+f.playTasks;
+f.stopTasks;
+t.sources.tasks.volume_in.start;
 
+//
+// Change FPS (frames per second) for a source
+//
+t.sources.fps.volume_in = 25;
+t.sources.fps.volume_in = 1;
 
-r.play;
-r.stop;
+//
+// Change verbose behavior for a source
+//
+t.sources.verbose.volume_in = false;
+t.sources.verbose.pitch_in = false;
+t.sources.verbose.mfcc_in = false;
+t.sources.verbose.volume_in = true;
+
+//
+// Quit server
+//
 s.quit;
-
-~busses
-~playEvents.value;
-
-~routines[\mfcc].stop;
-~routines[\pitch].stop;
-~routines[\pitch].start;
