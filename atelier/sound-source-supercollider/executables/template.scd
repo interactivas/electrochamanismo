@@ -1,13 +1,34 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // aluarosi - 2020-02
+// aluarosi - 2020-03
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-// TODO: Centralise in a table (list of dicts)
-// TODO: Rename from "routines" to "tasks" to be more consistent
-
 ( // Double-click on this opening parenthesis and hit shift-enter to run
+
+// TODO:
+// - Register OSC observers
+// - GUI controls
+// - Add more machine listening modules
+// - Consider value normalisation along a time interval
+// - ...
+
+////////////////////////////////////////////////////////////////////////////////
+// NAMESPACING
+////////////////////////////////////////////////////////////////////////////////
+//
+// We use global variables to organise our code in namespaces.
+// Each global variable below points to an Event, which works as a namespace.
+//
+// d -> Definitions / Constants. Not meant to be changed.
+// i -> Imported objects/functions
+// c -> Configuration. Meant to be changed by the user.
+// t -> State. The user may interact with some pieces of it in real-time.
+//             (See real-time section at the end of this file).
+// s -> Reference to local server.
+//
+////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // DEFINITIONS - This should rarely be changed
@@ -21,55 +42,7 @@ d = (
 // IMPORTS - These objects/functions should better be imported!
 ////////////////////////////////////////////////////////////////////////////////
 i = ();
-
-i.makeSynthDefVolume= {
-	|self, synthName = \volume|
-	"Making SynthDef for -> ".post; synthName.postln;
-
-	SynthDef(synthName, {
-		|self, outControlBus=0, outAudioBus = 0, inAudioBus = 0|
-
-		var in, amp, freq, hasFreq, sound;
-		in = SoundIn.ar(inAudioBus);
-		amp = Amplitude.kr(in, 0.05, 0.05);
-		Out.kr(outControlBus, amp);
-	});
-};
-
-i.makeSynthDefPitch = {
-	|self, synthName = \pitch|
-	"Making SynthDef for -> ".post; synthName.postln;
-
-	SynthDef(synthName, {
-		|outControlBus=0, outAudioBus = 0, inAudioBus = 0|
-
-		var in, amp, freq, hasFreq, sound;
-		in = SoundIn.ar(inAudioBus);
-		amp = Amplitude.kr(in, 0.05, 0.05);
-		//# freq, hasFreq = Pitch.kr(in, ampThreshold: 0.02, median: 7);
-		# freq, hasFreq = Pitch.kr(in);
-		//sound = SinOsc.ar(freq, mul: amp * EnvGen.kr(Env.perc, Impulse.kr(1)));
-		//Out.ar(outAudioBus,sound);
-		Out.kr(outControlBus, freq);
-	});
-};
-
-i.makeSynthDefMFCC = {
-	|self, synthName = \mfcc|
-	"Making SynthDef for -> ".post; synthName.postln;
-
-	SynthDef(synthName, {
-		|outControlBus=0, outAudioBus = 0, inAudioBus = 0, fftSize = 1024|
-
-		var in, fft, array;
-		in = SoundIn.ar(inAudioBus);
-		fft = FFT(LocalBuf(fftSize), in);
-		array = MFCC.kr(fft);
-		//array.size.postln;
-		Out.kr(outControlBus, array);
-		//Out.ar(outAudioBus,Pan2.ar(in));
-	});
-};
+("synthDefs.scd").loadRelative;
 
 ////////////////////////////////////////////////////////////////////////////////
 // CONFIGURATION  - Change this to fit your needs
@@ -82,21 +55,21 @@ c.osc = (
 c.sources = (
 	volume_in: (
 		oscTag: "/volume-in",
-		synthDefFactory: i[\makeSynthDefVolume],
+		synthDefFactory: i[\makeSynthDef_Volume],
 		channels: 1,
 		fps: 1,
 		verbose: true
 	),
 	pitch_in: (
 		oscTag: "/pitch-in",
-		synthDefFactory: i[\makeSynthDefPitch],
+		synthDefFactory: i[\makeSynthDef_Pitch],
 		channels: 1,
 		fps: 1,
 		verbose: true
 	),
 	mfcc_in: (
 		oscTag: "/mfcc-in",
-		synthDefFactory: i[\makeSynthDefMFCC],
+		synthDefFactory: i[\makeSynthDef_MFCC],
 		channels: 13,
 		fps: 1,
 		verbose: true
