@@ -85,7 +85,6 @@ c.sources = (
 		synthDefFactory: i[\makeSynthDefVolume],
 		channels: 1,
 		fps: 1,
-		started: true,
 		verbose: true
 	),
 	pitch_in: (
@@ -93,7 +92,6 @@ c.sources = (
 		synthDefFactory: i[\makeSynthDefPitch],
 		channels: 1,
 		fps: 1,
-		started: true,
 		verbose: true
 	),
 	mfcc_in: (
@@ -101,7 +99,6 @@ c.sources = (
 		synthDefFactory: i[\makeSynthDefMFCC],
 		channels: 13,
 		fps: 1,
-		started: true,
 		verbose: true
 	)
 );
