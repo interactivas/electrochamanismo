@@ -35,7 +35,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 d = (
 	out: 0,
-	pathSamples: PathName(thisProcess.nowExecutingPath).parentPath ++ "../samples/";
+	pathSamples: PathName(thisProcess.nowExecutingPath).parentPath ++ "../samples/",
+	defaults: (
+		fps: 25
+	)
 );
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -57,42 +60,42 @@ c.sources = (
 		oscTag: "/volume-in",
 		synthDefFactory: i[\makeSynthDef_Volume],
 		channels: 1,
-		fps: 1,
+		fps: d.defaults.fps,
 		verbose: true
 	),
 	pitch_in: (
 		oscTag: "/pitch-in",
 		synthDefFactory: i[\makeSynthDef_Pitch],
 		channels: 1,
-		fps: 1,
+		fps: d.defaults.fps,
 		verbose: true
 	),
 	mfcc_in: (
 		oscTag: "/mfcc-in",
 		synthDefFactory: i[\makeSynthDef_MFCC],
 		channels: 13,
-		fps: 1,
+		fps: d.defaults.fps,
 		verbose: true
 	),
 	loudness_in: (
 		oscTag: "/loudness-in",
 		synthDefFactory: i[\makeSynthDef_Loudness],
 		channels: 1,
-		fps: 1,
+		fps: d.defaults.fps,
 		verbose: true
 	),
-	loudness_in: (
+	speccentroid_in: (
 		oscTag: "/speccentroid-in",
 		synthDefFactory: i[\makeSynthDef_SpecCentroid],
 		channels: 1,
-		fps: 1,
+		fps: d.defaults.fps,
 		verbose: true
 	),
 	onsets_in: (
 		oscTag: "/onsets-in",
 		synthDefFactory: i[\makeSynthDef_Onsets],
 		channels: 1,
-		fps: 50,
+		fps: d.default_fps,
 		verbose: false
 	)
 );
@@ -103,14 +106,15 @@ c.sources = (
 t = ();
 t.ui = (
 	window: nil,
-	view_mfcc: nil
 );
 t.sources = (
 	busses: (),
 	synths: (),
 	tasks: (),
+	uipollers: (),
 	fps: (),
-	verbose: ()
+	verbose: (),
+	uiViewsMultiSlider: ()
 );
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -119,21 +123,47 @@ t.sources = (
 f = ();
 
 f.makeUI = {
-	t.ui.window = Window.new(
-		"Thirteen MFCC coefficients",
-		Rect(200, 400, 300, 300)
-	);
-	t.ui.view_mfcc = MultiSliderView.new(t.ui.window, Rect(10, 10, 260, 280));
 
-	t.ui.view_mfcc.value_(Array.fill(13, 0.0));
-	t.ui.view_mfcc.valueThumbSize_(20.0);
-	t.ui.view_mfcc.indexThumbSize_(20.0);
-	t.ui.view_mfcc.gap_(0);
+	var counter=0, w=50, offset=10, totalWidth, h = 280;
+
+	totalWidth = 2*offset;
+	c.sources.keysValuesDo {
+		|sourceName, sourceConfig|
+		totalWidth = sourceConfig.channels * w + totalWidth;
+	};
+
+	t.ui.window = Window.new(
+		"Machine Listening",
+		Rect(200, 400, totalWidth, 280 + offset + offset)
+	);
+
+	c.sources.keysValuesDo {
+		|sourceName, sourceConfig|
+
+		var label;
+
+		t.sources.uiViewsMultiSlider[sourceName] =  MultiSliderView.new(
+			t.ui.window, Rect(counter * w + offset, offset, w * sourceConfig.channels, h)
+		);
+		t.sources.uiViewsMultiSlider.postln;
+		t.sources.uiViewsMultiSlider[sourceName].valueThumbSize = 3;
+		t.sources.uiViewsMultiSlider[sourceName].indexThumbSize = w;
+		t.sources.uiViewsMultiSlider[sourceName].gap = 0;
+
+		label = StaticText(
+			t.ui.window,
+			Rect(counter * w + offset, offset + h, w, offset);
+		);
+		label.string = sourceName;
+
+		counter = counter + sourceConfig.channels;
+
+	};
 
 	t.ui.window.front;
 };
 
-f.makeRoutinePoller = {
+f.makeTaskPoller = {
 	|self, sourceName, bus, oscTag, fps=1, verbose=false|
 
 	"Making poller routine for bus :".post; bus.postln;
@@ -152,6 +182,26 @@ f.makeRoutinePoller = {
 			});
 			(1/t.sources.fps[sourceName]).wait;
 		}
+	});
+};
+
+f.makeUIPoller = {
+	|self, sourceName, bus, fps=1|
+
+	"Making UI poller for bus :".post; bus.postln;
+
+	Task.new({
+		"Task started for UI poller: ".post; sourceName.postln;
+		t.sources.fps[sourceName] = fps;
+		loop {
+			bus.getn(bus.numChannels, {
+				|val|
+				{
+					t.sources.uiViewsMultiSlider[sourceName].value_(val * 0.9);
+				}.defer; // Delay the evaluation of this Function by delta in seconds on AppClock.
+			});
+			(1/t.sources.fps[sourceName]).wait;
+		};
 	});
 };
 
@@ -228,7 +278,7 @@ f.makeTasks = {
 	f.clearTasks.value;
 	c.sources.keysValuesDo {
 		|sourceName, sourceConfig|
-		t.sources.tasks[sourceName] = f.makeRoutinePoller(
+		t.sources.tasks[sourceName] = f.makeTaskPoller(
 			sourceName,
 			t.sources.busses[sourceName],
 			c.sources[sourceName].oscTag,
@@ -247,6 +297,43 @@ f.playTasks = {
 	};
 };
 
+f.stopUIPollers = {
+	"--- stopUIPollers".postln;
+	t.sources.uipollers.keysValuesDo {
+		|sourceName,poller|
+		poller.stop;
+	};
+	t.sources.uipollers.postln;
+};
+
+
+f.clearUIPollers = {
+	"--- clearUIPollers".postln;
+	f.stopUIPollers;
+	t.sources.uipollers = ();
+	t.sources.uipollers.postln;
+};
+
+f.makeUIPollers = {
+	"--- makeUIPollers".postln;
+	c.sources.keysValuesDo {
+		|sourceName, sourceConfig|
+		t.sources.uipollers[sourceName] = f.makeUIPoller(
+			sourceName,
+			t.sources.busses[sourceName],
+			c.sources[sourceName].fps
+		);
+	};
+};
+
+f.playUIPollers = {
+	"--- playUIPollers".postln;
+	t.sources.uipollers.keysValuesDo {
+		|sourceName, poller|
+		poller.play;
+	};
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // CLEANUP
 ////////////////////////////////////////////////////////////////////////////////
@@ -258,6 +345,7 @@ f.clearFps = {
 
 f.cleanup = {
 	"--- cleanup".postln;
+	f.clearUIPollers;
 	f.clearTasks;
 	f.clearSynths;
 	f.clearFps;
@@ -298,8 +386,12 @@ s.waitForBoot({
 	s.sync;
 
 	ServerTree.add(f[\makeSynths]);
+	ServerTree.add(f[\makeUIPollers]);
 	ServerTree.add(f[\makeTasks]);
-	ServerTree.add(f[\playTasks]);
+
+	ServerTree.add(f[\playUIPollers]);
+	//ServerTree.add(f[\playTasks]);
+
 	// Forces server to re-evaluate the 2 previous functions
 	s.freeAll;
 
@@ -324,15 +416,19 @@ t.sources.tasks.pitch_in.stop;
 t.sources.tasks.mfcc_in.stop;
 f.playTasks;
 f.stopTasks;
+f.playUIPollers;
 t.sources.tasks.volume_in.start;
 t.sources.tasks.loudness_in.start;
 t.sources.tasks.onsets_in.start;
+t.sources.tasks.onsets_in.stop;
+t.sources.tasks.pitch_in.start;
 
 //
 // Change FPS (frames per second) for a source
 //
 t.sources.fps.volume_in = 25;
 t.sources.fps.volume_in = 1;
+t.sources.fps.mfcc_in = 25;
 
 //
 // Change verbose behavior for a source
