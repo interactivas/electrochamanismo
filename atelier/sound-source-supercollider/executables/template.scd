@@ -73,6 +73,27 @@ c.sources = (
 		channels: 13,
 		fps: 1,
 		verbose: true
+	),
+	loudness_in: (
+		oscTag: "/loudness-in",
+		synthDefFactory: i[\makeSynthDef_Loudness],
+		channels: 1,
+		fps: 1,
+		verbose: true
+	),
+	loudness_in: (
+		oscTag: "/speccentroid-in",
+		synthDefFactory: i[\makeSynthDef_SpecCentroid],
+		channels: 1,
+		fps: 1,
+		verbose: true
+	),
+	onsets_in: (
+		oscTag: "/onsets-in",
+		synthDefFactory: i[\makeSynthDef_Onsets],
+		channels: 1,
+		fps: 50,
+		verbose: false
 	)
 );
 
@@ -80,6 +101,10 @@ c.sources = (
 // STATE - You may tinker with this in real-time (see bottom of this file)
 ////////////////////////////////////////////////////////////////////////////////
 t = ();
+t.ui = (
+	window: nil,
+	view_mfcc: nil
+);
 t.sources = (
 	busses: (),
 	synths: (),
@@ -92,6 +117,21 @@ t.sources = (
 // FUNCTIONS
 ////////////////////////////////////////////////////////////////////////////////
 f = ();
+
+f.makeUI = {
+	t.ui.window = Window.new(
+		"Thirteen MFCC coefficients",
+		Rect(200, 400, 300, 300)
+	);
+	t.ui.view_mfcc = MultiSliderView.new(t.ui.window, Rect(10, 10, 260, 280));
+
+	t.ui.view_mfcc.value_(Array.fill(13, 0.0));
+	t.ui.view_mfcc.valueThumbSize_(20.0);
+	t.ui.view_mfcc.indexThumbSize_(20.0);
+	t.ui.view_mfcc.gap_(0);
+
+	t.ui.window.front;
+};
 
 f.makeRoutinePoller = {
 	|self, sourceName, bus, oscTag, fps=1, verbose=false|
@@ -243,6 +283,7 @@ s.options.memSize_(2.pow(20)); // Roughly 1GB, probably extremely generous!
 // Cleanup first to be extra-safe.
 f.cleanup;
 ServerBoot.add(f[\makeBusses]);
+ServerBoot.add(f[\makeUI]);
 ServerQuit.add(f[\cleanup]);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -284,6 +325,8 @@ t.sources.tasks.mfcc_in.stop;
 f.playTasks;
 f.stopTasks;
 t.sources.tasks.volume_in.start;
+t.sources.tasks.loudness_in.start;
+t.sources.tasks.onsets_in.start;
 
 //
 // Change FPS (frames per second) for a source
