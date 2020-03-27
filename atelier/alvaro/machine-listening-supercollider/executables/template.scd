@@ -95,7 +95,7 @@ c.sources = (
 		oscTag: "/onsets-in",
 		synthDefFactory: i[\makeSynthDef_Onsets],
 		channels: 1,
-		fps: d.default_fps,
+		fps: d.defaults.fps,
 		verbose: false
 	)
 );
@@ -442,3 +442,6 @@ t.sources.verbose.volume_in = true;
 // Quit server
 //
 s.quit;
+
+
+t.sources.fps
