@@ -11,11 +11,11 @@ i.makeSynthDef_Volume = {
 	"Making SynthDef for -> ".post; synthName.postln;
 
 	SynthDef(synthName, {
-		|outControlBus=0, outAudioBus = 0, inAudioBus = 0|
+		|outControlBus=0, outAudioBus = 0, inAudioBus = 0, scalefactor = 20|
 
 		var in, amp, freq, hasFreq, sound;
 		in = SoundIn.ar(inAudioBus);
-		amp = Amplitude.kr(in, 0.05, 0.05);
+		amp = Amplitude.kr(in, 0.05, 0.05) * scalefactor;
 		Out.kr(outControlBus, amp);
 	});
 };
@@ -25,7 +25,7 @@ i.makeSynthDef_Pitch = {
 	"Making SynthDef for -> ".post; synthName.postln;
 
 	SynthDef(synthName, {
-		|outControlBus=0, outAudioBus = 0, inAudioBus = 0|
+		|outControlBus=0, outAudioBus = 0, inAudioBus = 0, scalefactor = 0.001|
 
 		var in, amp, freq, hasFreq, sound;
 		in = SoundIn.ar(inAudioBus);
@@ -34,7 +34,7 @@ i.makeSynthDef_Pitch = {
 		# freq, hasFreq = Pitch.kr(in);
 		//sound = SinOsc.ar(freq, mul: amp * EnvGen.kr(Env.perc, Impulse.kr(1)));
 		//Out.ar(outAudioBus,sound);
-		Out.kr(outControlBus, freq);
+		Out.kr(outControlBus, freq * scalefactor);
 	});
 };
 
@@ -60,12 +60,12 @@ i.makeSynthDef_Loudness = {
 	"Making SynthDef for -> ".post; synthName.postln;
 
 	SynthDef(synthName, {
-		|outControlBus=0, outAudioBus = 0, inAudioBus = 0, fftSize = 1024|
+		|outControlBus=0, outAudioBus = 0, inAudioBus = 0, fftSize = 1024, scalefactor = 0.1|
 
 		var in, fft, loudness;
 		in = SoundIn.ar(inAudioBus);
 		fft = FFT(LocalBuf(fftSize), in);
-		loudness = Loudness.kr(fft);
+		loudness = Loudness.kr(fft) * scalefactor;
 
 		Out.kr(outControlBus, loudness);
 	});
@@ -76,12 +76,12 @@ i.makeSynthDef_SpecCentroid = {
 	"Making SynthDef for -> ".post; synthName.postln;
 
 	SynthDef(synthName, {
-		|outControlBus=0, outAudioBus = 0, inAudioBus = 0, fftSize = 1024|
+		|outControlBus=0, outAudioBus = 0, inAudioBus = 0, fftSize = 1024, scalefactor = 0.0001|
 
 		var in, fft, spec_centroid;
 		in = SoundIn.ar(inAudioBus);
 		fft = FFT(LocalBuf(fftSize), in);
-		spec_centroid = SpecCentroid.kr(fft);
+		spec_centroid = SpecCentroid.kr(fft) * scalefactor;
 
 		Out.kr(outControlBus, spec_centroid);
 	});
