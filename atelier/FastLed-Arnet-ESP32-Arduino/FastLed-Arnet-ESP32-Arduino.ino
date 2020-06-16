@@ -21,7 +21,7 @@
 
 
 // LED Strip
-const int numLeds = 200; // Change if your setup has more or less LED's
+const int numLeds = 300; // Change if your setup has more or less LED's
 const int numberOfChannels = numLeds * 3; // Total number of DMX channels you want to receive (1 led = 3 channels)
 #define DATA_PIN 6 //The data pin that the WS2812 strips are connected to.
 CRGB leds[numLeds];
@@ -82,7 +82,7 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* d
   // read universe and put into the right part of the display buffer
   for (int i = 0; i < length / 3; i++)
   {
-    int led = i + (universe - startUniverse) * (previousDataLength / 3);
+    int led = i + (universe - startUniverse) * (length / 3);
     if (led < numLeds)
     {
       leds[led] = CRGB(data[i * 3], data[i * 3 + 1], data[i * 3 + 2]);
@@ -94,29 +94,30 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* d
 
 void initTest()
 {
-  for (int i = 0 ; i < numLeds ; i++)
+  for (int i = 0 ; i < numLeds ; i+=15)
     leds[i] = CRGB(0, 0, 10);
   FastLED.show();
   delay(2000);
-  for (int i = 0 ; i < numLeds ; i++)
+  for (int i = 0 ; i < numLeds ; i+=15)
     leds[i] = CRGB(0, 10, 0);
   FastLED.show();
   delay(2000);
-  for (int i = 0 ; i < numLeds ; i++)
+  for (int i = 0 ; i < numLeds ; i+=15)
     leds[i] = CRGB(10, 0, 0);
   FastLED.show();
   delay(2000);
-  for (int i = 0 ; i < numLeds ; i++)
+  for (int i = 0 ; i < numLeds ; i+=15)
     leds[i] = CRGB(0, 0, 0);
   FastLED.show();
 }
 
 void showConnection(boolean connection) {  
-  for (int i = 0 ; i < 20 ; i++)
+  for (int i = 0 ; i < 5 ; i++)
     leds[i] = connection ? CRGB::Blue : CRGB:: Red;
   FastLED.show();
 
   delay(5000);
+  FastLED.clear();
 }
 
 void setup()

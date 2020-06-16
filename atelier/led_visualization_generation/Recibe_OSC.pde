@@ -19,6 +19,7 @@ void oscEvent(OscMessage theOscMessage) {
   if (theOscMessage.checkAddrPattern("/mfcc")==true) {
     for (int i = 0; i < theOscMessage.arguments().length; i++) {
       vector[i] = (float) theOscMessage.arguments()[i];
+      //println(theOscMessage.arguments()[i]);
     }
   }
 }
