@@ -23,7 +23,7 @@ void draw () {
     rect(i*20+20, height/2 + 50, 20, -f*100);
   }
   
-  visualizacion(1);
+  //visualizacion(1);
   
   
   sendDMX(numLeds, arduinoIP);

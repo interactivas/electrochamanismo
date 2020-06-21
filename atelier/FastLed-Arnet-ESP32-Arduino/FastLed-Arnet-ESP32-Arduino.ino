@@ -94,19 +94,20 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* d
 
 void initTest()
 {
-  for (int i = 0 ; i < numLeds ; i+=15)
+  int stopLed = 10;
+  for (int i = 0 ; i < stopLed ; i+=5)
     leds[i] = CRGB(0, 0, 10);
   FastLED.show();
   delay(2000);
-  for (int i = 0 ; i < numLeds ; i+=15)
+  for (int i = 0 ; i < stopLed ; i+=5)
     leds[i] = CRGB(0, 10, 0);
   FastLED.show();
   delay(2000);
-  for (int i = 0 ; i < numLeds ; i+=15)
+  for (int i = 0 ; i < stopLed ; i+=5)
     leds[i] = CRGB(10, 0, 0);
   FastLED.show();
   delay(2000);
-  for (int i = 0 ; i < numLeds ; i+=15)
+  for (int i = 0 ; i < stopLed ; i+=5)
     leds[i] = CRGB(0, 0, 0);
   FastLED.show();
 }
