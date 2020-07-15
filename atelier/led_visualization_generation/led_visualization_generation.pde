@@ -1,6 +1,6 @@
 
 int numLeds = 300;
-String arduinoIP = "192.168.1.22";
+String arduinoIP = "192.168.1.114";
 
 float[] vector = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -8,6 +8,7 @@ void setup () {
   size(900, 600);
   setupDMX(numLeds, arduinoIP);
   oscP5setup();
+  AudioSetup();
 }
 
 void draw () {
@@ -23,7 +24,7 @@ void draw () {
     rect(i*20+20, height/2 + 50, 20, -f*100);
   }
   
-  //visualizacion(1);
+  visualizacion(4);
   
   
   sendDMX(numLeds, arduinoIP);
