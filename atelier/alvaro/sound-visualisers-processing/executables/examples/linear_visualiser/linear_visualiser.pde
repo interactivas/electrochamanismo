@@ -1,10 +1,10 @@
 //import java.util.Map;
 import java.util.List;
-import oscP5.*;
 
 ////////////////////////////////////////////////////////////////////////////////
-// INTERFACES
+//
 ////////////////////////////////////////////////////////////////////////////////
+
 
 interface SoundVisualiser {
   void update(float time);
@@ -16,51 +16,8 @@ interface LinearWave {
   color plot(float time, float x);
 }
 
-interface Observer {
-  void update(Message msg);
-}
-
 ////////////////////////////////////////////////////////////////////////////////
-// Observer and messages
-////////////////////////////////////////////////////////////////////////////////
-
-class Message {
-   
-  String address;
-  Object arguments;
-  
-  Message(String address, Object arguments) {
-    this.address = address;
-    this.arguments = arguments;
-  }
-}
-
-class Observable {
-  
-  List<Observer> observers = new ArrayList();
-  
-  Observable() {
-  }
-  
-  void subscribe(Observer observer) {
-    observers.add(observer);
-    println("New subscriber ", observers);
-  }
-  void unsubscribe(Observer observer) {
-    observers.remove(observer);
-    println("Deleted subscriber ", observers);
-  }
-  
-  void emit(Message msg) {
-    println("Emitting message to subscribers. ", msg, observers);
-    for (Observer o : observers) {
-      o.update(msg);
-    }
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Visualiser
+//
 ////////////////////////////////////////////////////////////////////////////////
 class SquareWave implements LinearWave {
   
@@ -150,65 +107,13 @@ class LinearSoundVisualiser implements SoundVisualiser {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// OSC listener
-////////////////////////////////////////////////////////////////////////////////
-
-class OSCListener extends Observable {
-
-  OSCListener() {
-    super();
-  }
-
-  void oscEvent(OscMessage msg) {
-    
-    Message m = new Message(
-      msg.addrPattern(),
-      msg.arguments()
-    );
-    
-    this.emit(m);
-    /*
-    if (msg.checkAddrPattern("/volume-in") == true ) {
-      Float value= msg.get(0).floatValue();
-      println("--");
-      println(value);
-      println(msg.arguments());
-      println(msg.arguments().length);
-    }
-    */
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// OSC normaliser
-////////////////////////////////////////////////////////////////////////////////
-
-class OSCNormaliser extends Observable implements Observer {
-
-  OSCNormaliser() {
-  }
-  
-  void update(Message m){
-    println("Normaliser getting message: ", m.address);
-  }
-  
-}
-
-
-////////////////////////////////////////////////////////////////////////////////
-// References
+//
 ////////////////////////////////////////////////////////////////////////////////
 
 LinearSoundVisualiser visualiser;
 SquareWave wave;
-OscP5 oscP5;
-OSCListener listener;
-OSCNormaliser normaliser;
 
-////////////////////////////////////////////////////////////////////////////////
-// CONFIGURATION
-////////////////////////////////////////////////////////////////////////////////
-int OSC_PORT = 7777;
+
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -218,8 +123,6 @@ void setup() {
   
   println("setup");
   //noLoop();
-  frameRate(25);
-
   
   size(1024, 10);
   background(0);
@@ -228,12 +131,6 @@ void setup() {
   noStroke();
   
   visualiser = new LinearSoundVisualiser(width);
-  listener = new OSCListener();
-  // Temporary. This is to be managed by the visualiser?
-  normaliser = new OSCNormaliser();
-  listener.subscribe(normaliser);
-  
-  oscP5 = new OscP5(listener , OSC_PORT );
   
  
   println();
