@@ -411,6 +411,9 @@ nil;
 //
 // Stop/start tasks
 //
+t.sources.tasks.volume_in.start;
+t.sources.tasks.pitch_in.start;
+t.sources.tasks.mfcc_in.start;
 t.sources.tasks.volume_in.stop;
 t.sources.tasks.pitch_in.stop;
 t.sources.tasks.mfcc_in.stop;

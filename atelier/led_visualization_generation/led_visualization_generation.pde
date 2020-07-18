@@ -1,6 +1,8 @@
 
 int numLeds = 300;
-String arduinoIP = "192.168.1.114";
+//String arduinoIP = "192.168.1.114";
+String arduinoIP = "192.168.1.22";
+
 
 float[] vector = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
