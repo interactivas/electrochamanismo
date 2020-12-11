@@ -238,8 +238,8 @@ void builtin_led_blink () {
 
 void setup()
 {
-  pinMode(ledPin, OUTPUT);
-  analogWrite(ledPin, 800); // remember HIGH is off
+  //pinMode(ledPin, OUTPUT);
+  //analogWrite(ledPin, 800); // remember HIGH is off
   Serial.begin(115200);
 
   Serial.print("LED_BUILTIN = ");
@@ -247,7 +247,7 @@ void setup()
 
   FastLED.addLeds<WS2812, DATA_PIN, GRB>(leds, numLeds);
 
-  wifi_managment();
+  //wifi_managment();
   
   artnet.begin();
 
@@ -265,12 +265,12 @@ void loop()
 
   artnet.read();
   //builtin_led_blink();
-  webclientloop();
+  //webclientloop();
 
 }
 
 // ---------------- webclinentlopp --------------  temporal
-
+/*
 void webclientloop() {
   // listen for incoming clients
   WiFiClient client = server.available();   // Listen for incoming clients
@@ -278,8 +278,8 @@ void webclientloop() {
   if (client) {                             // If a new client connects,
     Serial.println("New Client.");          // print a message out in the serial port
     String currentLine = "";                // make a String to hold incoming data from the client
-    currentTime = millis();
-    previousTime = currentTime;
+    long currentTime = millis();
+    long previousTime = currentTime;
     while (client.connected() && currentTime - previousTime <= timeoutTime) { // loop while the client's connected
       currentTime = millis();         
       if (client.available()) {             // if there's bytes to read from the client,
@@ -369,3 +369,4 @@ void webclientloop() {
     Serial.println("");
   }
 }
+*/
