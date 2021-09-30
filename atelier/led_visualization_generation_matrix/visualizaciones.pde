@@ -28,15 +28,15 @@ void AudioSetup() {
 
 void visualizacion(int n) {
   if (n == 0) { 
-    fill(100, 0, 0);
-    rect(mouseX, mouseY, 20, 80);
+    fill(255, 0, 0);
+    rect(mouseX, mouseY, 130, 130);
   }
   if (n == 1) {
-    int t = frameCount;
+    int t = frameCount/2;
     colorMode(HSB);
     for (int i = 0; i < 9; i++) {
       fill((i*10+t)%255, 255, 255);
-      rect((i*200 + t)%width, 0, 70, height);
+      rect((i*300 + t)%width, 0, 50, height);
     }
   }
   if (n == 2) {

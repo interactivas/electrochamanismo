@@ -44,9 +44,12 @@ boolean node_connected = false;
 
 
 // LED Strip
-const int numLeds = 300; // Change if your setup has more or less LED's
+// const int numLeds = 300; // Change if your setup has more or less LED's
+const int numLeds = 150;
 const int numberOfChannels = numLeds * 3; // Total number of DMX channels you want to receive (1 led = 3 channels)
-#define DATA_PIN 6 //The data pin that the WS2812 strips are connected to.
+//#define DATA_PIN 6 //The data pin that the WS2812 strips are connected to.
+#define DATA_PIN 6  //The data pin that the APA_102 strips are connected to.
+#define CLOCK_PIN 7 //The clock pin that the APA_102 strips are connected to.
 CRGB leds[numLeds];
 
 // Artnet settings
@@ -88,6 +91,8 @@ int wifi_managment() {
         Serial.println(WiFi.SSID(thisNet));
         network_id = i;
         break;
+      } else {
+        Serial.println("Network Not found! ");
       }
     }
   }
@@ -241,13 +246,14 @@ void setup()
   //pinMode(ledPin, OUTPUT);
   //analogWrite(ledPin, 800); // remember HIGH is off
   Serial.begin(115200);
+   Serial.println("hola");
+  //Serial.print("LED_BUILTIN = ");
+  //Serial.println(LED_BUILTIN, DEC);
 
-  Serial.print("LED_BUILTIN = ");
-  Serial.println(LED_BUILTIN, DEC);
+  //FastLED.addLeds<WS2812, DATA_PIN, GRB>(leds, numLeds); // Strip Led Neopixels (WS2812)
+  FastLED.addLeds<APA102, DATA_PIN, CLOCK_PIN, BGR>(leds, numLeds); // Matrix LED APA102
 
-  FastLED.addLeds<WS2812, DATA_PIN, GRB>(leds, numLeds);
-
-  //wifi_managment();
+  wifi_managment();
   
   artnet.begin();
 
